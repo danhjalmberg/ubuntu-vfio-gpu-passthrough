@@ -1,0 +1,30 @@
+#!/bin/sh
+exec tail -n +3 $0
+# This file provides an easy way to add custom menu entries.  Simply type the
+# menu entries you want to add after this comment.  Be careful not to change
+# the 'exec tail' line above.
+
+# Custom boot entry for VFIO mode.
+# In this mode, the NVIDIA GPU and dedicated PCIe USB controller are reserved
+# for passthrough instead of being used by the Ubuntu host.
+menuentry "Ubuntu VFIO mode" {
+    insmod gzio
+    insmod part_gpt
+    insmod ext2
+
+    # Root filesystem UUID. Update this if the Ubuntu system disk changes.
+    search --no-floppy --fs-uuid --set=root <ROOT-FILESYSTEM-UUID>
+
+    # Kernel parameters:
+    # - enable IOMMU
+    # - bind passthrough devices to vfio-pci
+    # - prevent NVIDIA host drivers/services from claiming the GPU
+    linux /boot/vmlinuz root=UUID=<ROOT-FILESYSTEM-UUID> ro \
+	intel_iommu=on iommu=pt \
+	vfio-pci.ids=10de:1bb1,10de:10f0,1912:0015 \
+	module_blacklist=nvidia,nvidia_drm,nvidia_modeset,nvidia_uvm,nouveau \
+	modprobe.blacklist=nvidia,nvidia_drm,nvidia_modeset,nvidia_uvm,nouveau \
+	systemd.mask=gpu-manager.service,nvidia-persistenced.service,nvidia-powerd.service
+
+    initrd /boot/initrd.img
+}

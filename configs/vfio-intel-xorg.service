@@ -1,0 +1,27 @@
+# systemd service used only in VFIO mode.
+# Installs an Intel-specific Xorg override before the graphical login starts,
+# so the Ubuntu host uses the Intel iGPU after the NVIDIA GPU has been
+# detached for passthrough.
+
+[Unit]
+Description=Install Intel Xorg config in VFIO mode
+Before=display-manager.service gdm.service
+
+# Run only when booted with the VFIO passthrough device IDs.
+ConditionKernelCommandLine=vfio-pci.ids=10de:1bb1,10de:10f0,1912:0015
+
+[Service]
+Type=oneshot
+
+# Create the local Xorg configuration directory if it does not exist.
+ExecStart=/bin/mkdir -p /etc/X11/xorg.conf.d
+
+# Copy the VFIO-mode Intel template into the active Xorg config location.
+# The active file is removed again when the service stops.
+ExecStart=/bin/cp /etc/vfio/10-intel-vfio.conf /etc/X11/xorg.conf.d/10-intel.conf
+ExecStop=/bin/rm -f /etc/X11/xorg.conf.d/10-intel.conf
+
+RemainAfterExit=yes
+
+[Install]
+WantedBy=graphical.target
